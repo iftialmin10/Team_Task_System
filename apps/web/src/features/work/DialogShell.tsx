@@ -16,14 +16,20 @@ export function DialogShell({ titleId, descriptionId, onClose, children }: {
     const focusable = () => Array.from(panel?.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])') ?? []);
     focusable()[0]?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') closeRef.current();
-      if (event.key !== 'Tab') return;
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeRef.current();
+        return;
+      }
+      if (event.key !== 'Tab' || !panel) return;
       const controls = focusable();
       if (!controls.length) return;
-      const first = controls[0]!;
-      const last = controls[controls.length - 1]!;
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+      const currentIndex = controls.indexOf(document.activeElement as HTMLElement);
+      const nextIndex = event.shiftKey
+        ? currentIndex <= 0 ? controls.length - 1 : currentIndex - 1
+        : currentIndex === -1 ? 0 : currentIndex === controls.length - 1 ? 0 : currentIndex + 1;
+      event.preventDefault();
+      controls[nextIndex]?.focus();
     };
     document.addEventListener('keydown', onKeyDown);
     const originalOverflow = document.body.style.overflow;

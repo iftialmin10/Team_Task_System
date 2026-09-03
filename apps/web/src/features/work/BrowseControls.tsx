@@ -72,6 +72,7 @@ export function BrowseControls({ state, users, onChange, onClear }: Props) {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [draft, setDraft] = useState(state);
   const closeButton = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLElement | null>(null);
   const activeCount = filterKeys.filter((key) => state[key] !== undefined).length;
 
   useEffect(() => {
@@ -81,7 +82,23 @@ export function BrowseControls({ state, users, onChange, onClear }: Props) {
   useEffect(() => {
     if (!filtersOpen) return;
     closeButton.current?.focus();
-    const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') setFiltersOpen(false); };
+    const focusable = () => Array.from(panelRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])') ?? []);
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setFiltersOpen(false);
+        return;
+      }
+      if (event.key !== 'Tab' || !panelRef.current) return;
+      const controls = focusable();
+      if (!controls.length) return;
+      const currentIndex = controls.indexOf(document.activeElement as HTMLElement);
+      const nextIndex = event.shiftKey
+        ? currentIndex <= 0 ? controls.length - 1 : currentIndex - 1
+        : currentIndex === -1 ? 0 : currentIndex === controls.length - 1 ? 0 : currentIndex + 1;
+      event.preventDefault();
+      controls[nextIndex]?.focus();
+    };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [filtersOpen]);
@@ -118,7 +135,7 @@ export function BrowseControls({ state, users, onChange, onClear }: Props) {
 
       {filtersOpen && (
         <div className="fixed inset-0 z-40 flex items-end bg-slate-950/45 md:hidden" onMouseDown={(event) => { if (event.target === event.currentTarget) setFiltersOpen(false); }}>
-          <section role="dialog" aria-modal="true" aria-labelledby="filters-heading" className="max-h-[92vh] w-full overflow-y-auto rounded-t-2xl bg-white p-5 shadow-overlay">
+          <section ref={panelRef} role="dialog" aria-modal="true" aria-labelledby="filters-heading" className="max-h-[92vh] w-full overflow-y-auto rounded-t-2xl bg-white p-5 shadow-overlay">
             <div className="flex items-center justify-between">
               <h2 id="filters-heading" className="text-xl font-semibold">Filter and sort</h2>
               <button ref={closeButton} type="button" onClick={() => setFiltersOpen(false)} className="min-h-11 rounded-lg px-3 text-sm font-semibold hover:bg-slate-100 active:bg-slate-200">Close</button>

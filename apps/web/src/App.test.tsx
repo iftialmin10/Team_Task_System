@@ -48,6 +48,32 @@ describe('core browse experience', () => {
     expect(screen.getByTestId('location').textContent).toBe('/work?priority=urgent');
   });
 
+  it('keeps keyboard focus contained inside the mobile filter sheet', async () => {
+    const user = userEvent.setup();
+    renderApp();
+    await screen.findByText('360 items in this view');
+    await user.click(screen.getByRole('button', { name: 'Filters' }));
+    const dialog = screen.getByRole('dialog', { name: 'Filter and sort' });
+    const closeButton = within(dialog).getByRole('button', { name: 'Close' });
+    expect(document.activeElement).toBe(closeButton);
+    await user.tab();
+    expect(document.activeElement).toBe(within(dialog).getByLabelText('Owner'));
+    await user.tab();
+    expect(document.activeElement).toBe(within(dialog).getByLabelText('Status'));
+    await user.tab();
+    expect(document.activeElement).toBe(within(dialog).getByLabelText('Priority'));
+    await user.tab();
+    expect(document.activeElement).toBe(within(dialog).getByLabelText('Due'));
+    await user.tab();
+    expect(document.activeElement).toBe(within(dialog).getByLabelText('Sort by'));
+    await user.tab();
+    expect(document.activeElement).toBe(within(dialog).getByRole('button', { name: 'Reset' }));
+    await user.tab();
+    expect(document.activeElement).toBe(within(dialog).getByRole('button', { name: 'Apply filters' }));
+    await user.tab();
+    expect(document.activeElement).toBe(closeButton);
+  });
+
   it('distinguishes filtered-empty and retryable error states', async () => {
     renderApp('/work?search=definitely-not-present');
     expect(await screen.findByRole('heading', { name: 'No work matches this view' })).toBeTruthy();

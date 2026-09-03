@@ -15,7 +15,7 @@
 @layer base {
   * { @apply border-line; }
   html { @apply bg-canvas text-ink antialiased; }
-  body { @apply m-0 min-w-[320px] bg-canvas font-sans; }
+  body { @apply m-0 min-w-[320px] overflow-x-hidden bg-canvas font-sans; }
   button, a, input, select, textarea { @apply focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2; }
   button:disabled { @apply cursor-not-allowed opacity-60; }
 }
