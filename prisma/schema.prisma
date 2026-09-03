@@ -1,0 +1,53 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../apps/api/src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum WorkStatus {
+  BACKLOG
+  READY
+  IN_PROGRESS
+  DONE
+}
+
+enum Priority {
+  NORMAL
+  HIGH
+  URGENT
+}
+
+model User {
+  id        String     @id @default(cuid())
+  name      String
+  email     String     @unique
+  workItems WorkItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([name])
+}
+
+model WorkItem {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  status      WorkStatus @default(BACKLOG)
+  priority    Priority   @default(NORMAL)
+  ownerId     String?
+  owner       User?      @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  dueDate     DateTime?  @db.Date
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([status])
+  @@index([ownerId])
+  @@index([priority])
+  @@index([dueDate])
+  @@index([status, dueDate])
+  @@index([createdAt])
+  @@index([updatedAt])
+}
