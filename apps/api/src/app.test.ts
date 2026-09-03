@@ -40,4 +40,11 @@ describe('API contract', () => {
     expect((await request(app).patch('/api/work-items/wrk_001').send({ priority: 'HIGH' })).status).toBe(200);
     expect((await request(app).get('/missing')).status).toBe(404);
   });
+  it('reports database readiness failures without exposing internal errors', async () => {
+    const deps = services();
+    const response = await request(createApp({ ...deps, health: { check: vi.fn().mockRejectedValue(new Error('credentials leaked here')) } })).get('/api/health');
+    expect(response.status).toBe(503);
+    expect(response.body).toEqual({ status: 'unavailable', database: 'disconnected' });
+    expect(JSON.stringify(response.body)).not.toContain('credentials leaked here');
+  });
 });

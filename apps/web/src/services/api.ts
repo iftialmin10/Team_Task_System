@@ -10,7 +10,8 @@ import {
   type WorkStatus,
 } from '@team-task-system/contracts';
 
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000/api';
+// Same-origin is production-safe; Vite proxies this path to the local API in development.
+const API_URL = (import.meta.env.VITE_API_URL ?? '/api').replace(/\/$/, '');
 
 async function requestJson<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, options);

@@ -1,16 +1,23 @@
-import dotenv from 'dotenv';
-import { fileURLToPath } from 'node:url';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { Pool } from 'pg';
 import { PrismaClient } from './generated/prisma/client.js';
+import type { getConfig } from './config.js';
 
-dotenv.config({ path: fileURLToPath(new URL('../../../.env', import.meta.url)), quiet: true });
+type AppConfig = ReturnType<typeof getConfig>;
+type Database = { prisma: PrismaClient; pool: Pool };
 
-const connectionString = process.env.DATABASE_URL;
-if (!connectionString) throw new Error('DATABASE_URL is required');
+export function createDatabase(config: AppConfig): Database {
+  const pool = new Pool({
+    connectionString: config.DATABASE_URL,
+    max: config.DATABASE_POOL_MAX,
+    connectionTimeoutMillis: config.DATABASE_CONNECT_TIMEOUT_MS,
+    idleTimeoutMillis: config.DATABASE_IDLE_TIMEOUT_MS,
+    allowExitOnIdle: config.NODE_ENV !== 'production',
+  });
+  return { prisma: new PrismaClient({ adapter: new PrismaPg(pool) }), pool };
+}
 
-const adapter = new PrismaPg({ connectionString });
-
-const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
-export const prisma = globalForPrisma.prisma ?? new PrismaClient({ adapter });
-
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+export async function closeDatabase(database: Database) {
+  await database.prisma.$disconnect();
+  await database.pool.end();
+}

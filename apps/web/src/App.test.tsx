@@ -53,7 +53,7 @@ describe('core browse experience', () => {
     expect(await screen.findByRole('heading', { name: 'No work matches this view' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Clear search and filters' })).toBeTruthy();
 
-    server.use(http.get('http://localhost:4000/api/work-items', () => HttpResponse.json({ error: { message: 'Unavailable' } }, { status: 503 })));
+    server.use(http.get('*/api/work-items', () => HttpResponse.json({ error: { message: 'Unavailable' } }, { status: 503 })));
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'another' } });
     await waitFor(() => expect(screen.getByRole('alert')).toBeTruthy(), { timeout: 1500 });
     expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy();
@@ -91,7 +91,7 @@ describe('core mutations', () => {
 
   it('rolls back a failed optimistic status change and offers retry', async () => {
     const user = userEvent.setup();
-    server.use(http.patch('http://localhost:4000/api/work-items/:id/status', () => HttpResponse.json({ error: { message: 'Status service unavailable' } }, { status: 503 })));
+    server.use(http.patch('*/api/work-items/:id/status', () => HttpResponse.json({ error: { message: 'Status service unavailable' } }, { status: 503 })));
     renderApp();
     await screen.findByText('360 items in this view');
     const controls = screen.getAllByRole('button', { name: 'Move Mock work item 30 to In progress' });

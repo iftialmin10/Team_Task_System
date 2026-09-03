@@ -36,8 +36,12 @@ function buildWhere(query: WorkItemQuery, now?: Date): Prisma.WorkItemWhereInput
     if (query.due === 'upcoming') where.dueDate = { gte: tomorrow };
     if (query.due === 'overdue') {
       where.dueDate = { lt: today };
-      if (query.status === 'DONE') where.AND = [{ status: 'DONE' }, { status: { not: 'DONE' } }];
-      else where.status = query.status ?? { not: 'DONE' };
+      // An overdue item is, by product definition, incomplete. Combining it with
+      // status=DONE intentionally produces an empty result in the database.
+      where.AND = query.status === 'DONE'
+        ? [{ status: 'DONE' }, { status: { not: 'DONE' } }]
+        : [{ status: query.status ?? { not: 'DONE' } }];
+      delete where.status;
     }
   }
   return where;

@@ -3,7 +3,7 @@ import { createWorkItemSchema, updateStatusSchema, updateWorkItemSchema, workIte
 import { initialMockWorkItems, mockUsers } from './data';
 
 let workItems = structuredClone(initialMockWorkItems);
-const api = 'http://localhost:4000/api';
+const api = '*/api';
 const error = (status: number, message: string) => HttpResponse.json({ error: { code: status === 404 ? 'NOT_FOUND' : 'VALIDATION_ERROR', message } }, { status });
 
 export const handlers = [

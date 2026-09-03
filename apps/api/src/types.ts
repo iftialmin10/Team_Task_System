@@ -9,3 +9,4 @@ export interface WorkItemsApi {
 }
 
 export interface UsersApi { list(): Promise<unknown>; }
+export interface HealthApi { check(): Promise<void>; }

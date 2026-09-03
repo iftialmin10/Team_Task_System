@@ -15,7 +15,11 @@ describe('database query composition', () => {
   });
   it('uses Asia/Dhaka calendar boundaries and excludes done overdue work', () => {
     const where = workItemQueryHelpers.buildWhere({ ...defaults, due: 'overdue' }, new Date('2026-09-02T20:00:00.000Z'));
-    expect(where).toEqual({ dueDate: { lt: new Date('2026-09-03T00:00:00.000Z') }, status: { not: 'DONE' } });
+    expect(where).toEqual({ dueDate: { lt: new Date('2026-09-03T00:00:00.000Z') }, AND: [{ status: { not: 'DONE' } }] });
+    expect(workItemQueryHelpers.buildWhere({ ...defaults, due: 'overdue', status: 'DONE' }, new Date('2026-09-02T20:00:00.000Z'))).toEqual({
+      dueDate: { lt: new Date('2026-09-03T00:00:00.000Z') },
+      AND: [{ status: 'DONE' }, { status: { not: 'DONE' } }],
+    });
   });
   it('puts missing due dates last and adds stable tie-breakers', () => {
     expect(workItemQueryHelpers.buildOrderBy(defaults)).toEqual([
