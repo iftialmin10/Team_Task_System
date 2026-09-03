@@ -1,4 +1,4 @@
-import type { WorkItem } from '@team-task-system/contracts';
+import type { WorkItem, WorkStatus } from '@team-task-system/contracts';
 import { getDuePresentation, priorityClasses, priorityLabels, statusClasses, statusLabels } from './presentation';
 
 function StatusBadge({ item }: { item: WorkItem }) {
@@ -26,7 +26,24 @@ function Due({ item }: { item: WorkItem }) {
   return <span className={classes}>{due.label}</span>;
 }
 
-export function WorkList({ items }: { items: WorkItem[] }) {
+export function WorkList({ items, onOpen, onStatus, pendingStatusId, failedStatusId, onRetryStatus }: {
+  items: WorkItem[];
+  onOpen: (id: string) => void;
+  onStatus: (item: WorkItem, status: WorkStatus) => void;
+  pendingStatusId: string | undefined;
+  failedStatusId: string | undefined;
+  onRetryStatus: () => void;
+}) {
+  const statusControl = (item: WorkItem) => {
+    const stages: WorkStatus[] = ['BACKLOG', 'READY', 'IN_PROGRESS', 'DONE'];
+    const next = stages[(stages.indexOf(item.status) + 1) % stages.length]!;
+    return (
+    <div>
+      <button type="button" disabled={pendingStatusId === item.id} onClick={() => onStatus(item, next)} aria-label={`Move ${item.title} to ${statusLabels[next]}`} className={`min-h-11 rounded-lg border px-2.5 text-xs font-semibold hover:brightness-95 active:brightness-90 ${statusClasses[item.status]}`}>{pendingStatusId === item.id ? 'Moving…' : statusLabels[item.status]}</button>
+      {failedStatusId === item.id && <div className="mt-1 text-xs text-red-700" role="alert">Update failed. <button type="button" onClick={onRetryStatus} className="font-semibold underline">Retry</button></div>}
+    </div>
+    );
+  };
   return (
     <>
       <div className="hidden overflow-hidden rounded-xl border bg-white shadow-subtle md:block">
@@ -46,11 +63,11 @@ export function WorkList({ items }: { items: WorkItem[] }) {
             {items.map((item) => (
               <tr key={item.id} className="min-h-14 hover:bg-slate-50">
                 <th scope="row" className="px-4 py-3 font-semibold">
-                  <span className="block truncate" title={item.title}>{item.title}</span>
+                  <button type="button" onClick={() => onOpen(item.id)} className="block min-h-11 w-full truncate rounded-md text-left text-primary underline-offset-2 hover:underline active:text-blue-900" title={item.title}>{item.title}</button>
                   {item.priority !== 'NORMAL' && <span className="mt-1 inline-flex lg:hidden"><Priority item={item} /></span>}
                 </th>
                 <td className="px-4 py-3"><Owner item={item} /></td>
-                <td className="px-4 py-3"><StatusBadge item={item} /></td>
+                <td className="px-4 py-3">{statusControl(item)}</td>
                 <td className="hidden px-4 py-3 lg:table-cell"><Priority item={item} /></td>
                 <td className="px-4 py-3"><Due item={item} /></td>
                 <td className="hidden px-4 py-3 text-muted xl:table-cell">{new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(item.updatedAt))}</td>
@@ -64,13 +81,14 @@ export function WorkList({ items }: { items: WorkItem[] }) {
         {items.map((item) => (
           <li key={item.id} className="min-w-0 rounded-xl border bg-white p-4 shadow-subtle">
             <div className="flex min-w-0 items-start justify-between gap-3">
-              <h2 className="min-w-0 text-base font-semibold leading-6" title={item.title}>{item.title}</h2>
+              <h2 className="min-w-0 text-base font-semibold leading-6"><button type="button" onClick={() => onOpen(item.id)} className="min-h-11 text-left text-primary underline-offset-2 hover:underline active:text-blue-900" title={item.title}>{item.title}</button></h2>
               <StatusBadge item={item} />
             </div>
             <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-3 text-sm">
               <div className="min-w-0"><span className="mb-1 block text-xs font-medium text-muted">Owner</span><Owner item={item} /></div>
               <div><span className="mb-1 block text-xs font-medium text-muted">Priority</span><Priority item={item} /></div>
               <div className="col-span-2"><span className="mb-1 block text-xs font-medium text-muted">Due</span><Due item={item} /></div>
+              <div className="col-span-2"><span className="mb-1 block text-xs font-medium text-muted">Move to next stage</span>{statusControl(item)}</div>
             </div>
           </li>
         ))}
@@ -93,4 +111,3 @@ export function WorkListSkeleton() {
     </div>
   );
 }
-

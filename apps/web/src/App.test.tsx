@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { MemoryRouter, useLocation } from 'react-router-dom';
@@ -57,5 +57,47 @@ describe('core browse experience', () => {
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'another' } });
     await waitFor(() => expect(screen.getByRole('alert')).toBeTruthy(), { timeout: 1500 });
     expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy();
+  });
+});
+
+describe('core mutations', () => {
+  it('creates a work item and preserves the form until the request succeeds', async () => {
+    const user = userEvent.setup();
+    renderApp();
+    await screen.findByText('360 items in this view');
+    await user.click(screen.getByRole('button', { name: 'Add work' }));
+    const dialog = screen.getByRole('dialog', { name: 'Add work' });
+    expect(dialog).toBeTruthy();
+    await user.type(screen.getByLabelText(/Title/), 'Coordinate launch review');
+    await user.selectOptions(within(dialog).getByLabelText('Priority'), 'HIGH');
+    await user.click(within(dialog).getByRole('button', { name: 'Add work' }));
+    expect(await screen.findByText('Coordinate launch review was added to the backlog.')).toBeTruthy();
+    expect(await screen.findByText('361 items in this view')).toBeTruthy();
+  });
+
+  it('restores a URL-linked detail view and edits essential fields', async () => {
+    const user = userEvent.setup();
+    renderApp('/work?item=mock_001');
+    const dialog = await screen.findByRole('dialog', { name: /Prepare customer onboarding guide/ });
+    expect(screen.getByTestId('location').textContent).toContain('item=mock_001');
+    await user.click(screen.getByRole('button', { name: 'Edit work' }));
+    const description = screen.getByLabelText(/Description/);
+    await user.clear(description);
+    await user.type(description, 'Updated launch details');
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    expect(await screen.findByText('Updated launch details')).toBeTruthy();
+    expect(dialog).toBeTruthy();
+  });
+
+  it('rolls back a failed optimistic status change and offers retry', async () => {
+    const user = userEvent.setup();
+    server.use(http.patch('http://localhost:4000/api/work-items/:id/status', () => HttpResponse.json({ error: { message: 'Status service unavailable' } }, { status: 503 })));
+    renderApp();
+    await screen.findByText('360 items in this view');
+    const controls = screen.getAllByRole('button', { name: 'Move Mock work item 30 to In progress' });
+    await user.click(controls[0]!);
+    expect(await screen.findAllByText(/Update failed/)).toHaveLength(2);
+    await waitFor(() => expect(screen.getAllByRole('button', { name: 'Move Mock work item 30 to In progress' }).length).toBe(2));
+    expect(screen.getAllByRole('button', { name: 'Retry' }).length).toBeGreaterThan(0);
   });
 });
