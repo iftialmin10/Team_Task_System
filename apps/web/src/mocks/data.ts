@@ -7,7 +7,7 @@ export const mockUsers = [
 const statuses: WorkStatus[] = ['BACKLOG', 'READY', 'IN_PROGRESS', 'DONE'];
 const priorities: Priority[] = ['NORMAL', 'HIGH', 'URGENT'];
 
-export const initialMockWorkItems: WorkItem[] = Array.from({ length: 60 }, (_, index) => {
+export const initialMockWorkItems: WorkItem[] = Array.from({ length: 360 }, (_, index) => {
   const owner = index % 5 === 0 ? null : mockUsers[index % mockUsers.length]!;
   return {
     id: `mock_${String(index + 1).padStart(3, '0')}`,

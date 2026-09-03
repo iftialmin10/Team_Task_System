@@ -16,12 +16,31 @@ export const handlers = [
     const query = parsed.data;
     let data = workItems.filter((item) => {
       const term = query.search?.toLowerCase();
+      const todayParts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
+      const todayPart = (type: Intl.DateTimeFormatPartTypes) => todayParts.find((part) => part.type === type)?.value ?? '';
+      const today = `${todayPart('year')}-${todayPart('month')}-${todayPart('day')}`;
+      const dueDate = item.dueDate?.slice(0, 10);
+      const dueMatches = !query.due
+        || (query.due === 'none' && !dueDate)
+        || (query.due === 'today' && dueDate === today)
+        || (query.due === 'upcoming' && Boolean(dueDate && dueDate > today))
+        || (query.due === 'overdue' && Boolean(dueDate && dueDate < today && item.status !== 'DONE'));
       return (!term || item.title.toLowerCase().includes(term) || item.owner?.name.toLowerCase().includes(term))
         && (!query.owner || (query.owner === 'unassigned' ? item.ownerId === null : item.ownerId === query.owner))
         && (!query.status || item.status === query.status)
-        && (!query.priority || item.priority === query.priority);
+        && (!query.priority || item.priority === query.priority)
+        && dueMatches;
     });
-    data = data.sort((a, b) => a.id.localeCompare(b.id));
+    const direction = query.order === 'asc' ? 1 : -1;
+    data = data.sort((a, b) => {
+      const first = query.sort === 'owner' ? a.owner?.name ?? '\uffff'
+        : query.sort === 'dueDate' ? a.dueDate ?? '\uffff'
+        : String(a[query.sort]);
+      const second = query.sort === 'owner' ? b.owner?.name ?? '\uffff'
+        : query.sort === 'dueDate' ? b.dueDate ?? '\uffff'
+        : String(b[query.sort]);
+      return first.localeCompare(second) * direction || b.createdAt.localeCompare(a.createdAt) || a.id.localeCompare(b.id);
+    });
     const totalItems = data.length;
     const start = (query.page - 1) * query.pageSize;
     return HttpResponse.json({ data: data.slice(start, start + query.pageSize), pagination: { page: query.page, pageSize: query.pageSize, totalItems, totalPages: Math.ceil(totalItems / query.pageSize) } });
