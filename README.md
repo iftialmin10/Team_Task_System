@@ -2,6 +2,8 @@
 
 A simple shared task tracker for small teams. It is designed to replace a spreadsheet with a clearer way to find work, see what matters, and move tasks through a basic workflow.
 
+## Live Link: https://team-task-system-web.vercel.app/work
+
 ## Running the project
 
 You need Node.js 20.19 or newer and a Neon PostgreSQL database.
