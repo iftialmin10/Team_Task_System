@@ -27,7 +27,11 @@ export function DialogShell({
           'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
         ) ?? [],
       );
-    focusable()[0]?.focus();
+    const initialFocus =
+      panel?.querySelector<HTMLElement>("[data-dialog-initial-focus]") ??
+      focusable()[0] ??
+      panel;
+    initialFocus?.focus({ preventScroll: true });
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
@@ -36,21 +40,23 @@ export function DialogShell({
       }
       if (event.key !== "Tab" || !panel) return;
       const controls = focusable();
-      if (!controls.length) return;
-      const currentIndex = controls.indexOf(
-        document.activeElement as HTMLElement,
-      );
-      const nextIndex = event.shiftKey
-        ? currentIndex <= 0
-          ? controls.length - 1
-          : currentIndex - 1
-        : currentIndex === -1
-          ? 0
-          : currentIndex === controls.length - 1
-            ? 0
-            : currentIndex + 1;
-      event.preventDefault();
-      controls[nextIndex]?.focus();
+      if (!controls.length) {
+        event.preventDefault();
+        panel.focus();
+        return;
+      }
+      const first = controls[0]!;
+      const last = controls[controls.length - 1]!;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      } else if (!panel.contains(document.activeElement)) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener("keydown", onKeyDown);
     const originalOverflow = document.body.style.overflow;
@@ -75,7 +81,8 @@ export function DialogShell({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
-        className="max-h-[100dvh] w-full overflow-y-auto rounded-t-2xl bg-white shadow-overlay sm:max-h-[calc(100dvh-3rem)] sm:max-w-2xl sm:rounded-2xl"
+        tabIndex={-1}
+        className="max-h-[100dvh] w-full min-w-0 overscroll-contain overflow-y-auto overflow-x-hidden rounded-t-2xl bg-white pb-[env(safe-area-inset-bottom)] shadow-overlay sm:max-h-[calc(100dvh-3rem)] sm:max-w-2xl sm:rounded-2xl"
       >
         {children}
       </div>

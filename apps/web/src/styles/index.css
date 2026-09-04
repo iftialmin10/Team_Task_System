@@ -20,6 +20,7 @@
   }
   html {
     @apply bg-canvas text-ink antialiased;
+    color-scheme: light;
   }
   body {
     @apply m-0 min-w-[320px] overflow-x-hidden bg-canvas font-sans;
@@ -31,8 +32,25 @@
   textarea {
     @apply focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2;
   }
+  button,
+  select,
+  input[type="checkbox"],
+  input[type="radio"] {
+    touch-action: manipulation;
+  }
   button:disabled {
     @apply cursor-not-allowed opacity-60;
+  }
+}
+
+@media (forced-colors: active) {
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid ButtonText;
+    outline-offset: 2px;
   }
 }
 

@@ -216,3 +216,47 @@ describe("core mutations", () => {
     ).toBeGreaterThan(0);
   });
 });
+
+describe("accessibility and responsive hardening", () => {
+  it("restores focus and page scrolling when the filter sheet closes", async () => {
+    const user = userEvent.setup();
+    renderApp();
+    await screen.findByText("360 items in this view");
+    const trigger = screen.getByRole("button", { name: "Filters" });
+
+    await user.click(trigger);
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    expect(document.body.style.overflow).toBe("hidden");
+    expect(document.activeElement).toBe(
+      within(screen.getByRole("dialog", { name: "Filter and sort" })).getByRole("button", { name: "Close" }),
+    );
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog", { name: "Filter and sort" })).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+    expect(document.body.style.overflow).toBe("");
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("focuses and announces invalid form fields, then restores dialog focus", async () => {
+    const user = userEvent.setup();
+    renderApp();
+    await screen.findByText("360 items in this view");
+    const trigger = screen.getByRole("button", { name: "Add work" });
+
+    await user.click(trigger);
+    const dialog = screen.getByRole("dialog", { name: "Add work" });
+    const title = within(dialog).getByRole("textbox", { name: /Title/ });
+    expect(document.activeElement).toBe(title);
+
+    await user.click(within(dialog).getByRole("button", { name: "Add work" }));
+    const error = within(dialog).getByRole("alert");
+    expect(error.textContent).toBeTruthy();
+    await waitFor(() => expect(document.activeElement).toBe(title));
+    expect(title.getAttribute("aria-invalid")).toBe("true");
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog", { name: "Add work" })).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+  });
+});

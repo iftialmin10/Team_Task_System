@@ -32,6 +32,7 @@ export function WorkPage() {
   const statusMutation = useMutation({
     mutationFn: ({ item, status }: { item: WorkItem; status: WorkStatus }) => updateWorkItemStatus(item.id, status),
     onMutate: async ({ item, status }) => {
+      setAnnouncement(`Moving ${item.title} to ${status.toLowerCase().replace('_', ' ')}.`);
       await queryClient.cancelQueries({ queryKey: ['work-items'] });
       const lists = queryClient.getQueriesData<WorkItemListResponse>({ queryKey: ['work-items'] });
       const detail = queryClient.getQueryData<WorkItem>(['work-item', item.id]);
@@ -43,6 +44,7 @@ export function WorkPage() {
     onError: (_error, { item }, context) => {
       context?.lists.forEach(([key, data]) => queryClient.setQueryData(key, data));
       if (context?.detail) queryClient.setQueryData(['work-item', item.id], context.detail);
+      setAnnouncement(`Could not update ${item.title}. The previous status was restored.`);
     },
     onSuccess: (item) => { queryClient.setQueryData(['work-item', item.id], item); setAnnouncement(`${item.title} moved to ${item.status.toLowerCase().replace('_', ' ')}.`); },
     onSettled: () => void queryClient.invalidateQueries({ queryKey: ['work-items'] }),
@@ -105,8 +107,8 @@ export function WorkPage() {
       </div>
 
       {pagination && <Pagination {...pagination} onPage={(page) => changeState({ page })} onPageSize={(pageSize) => changeState({ pageSize }, { resetPage: true })} />}
-      <p className="sr-only" aria-live="polite">{workQuery.isSuccess && !workQuery.isFetching ? `${pagination?.totalItems ?? 0} work items loaded.` : ''}</p>
-      <p className="sr-only" aria-live="polite">{announcement}</p>
+      <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">{workQuery.isSuccess && !workQuery.isFetching ? `${pagination?.totalItems ?? 0} work items loaded.` : ''}</p>
+      <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">{announcement}</p>
       {creating && <CreateWorkDialog users={usersQuery.data ?? []} onClose={() => setCreating(false)} onCreated={(item) => { setCreating(false); setAnnouncement(`${item.title} was added to the backlog.`); }} />}
       {selectedId && <WorkItemDetails id={selectedId} users={usersQuery.data ?? []} onClose={closeItem} onSaved={(item) => setAnnouncement(`${item.title} was updated.`)} onStatus={(item, status) => { statusMutation.reset(); statusMutation.mutate({ item, status }); }} statusPending={statusMutation.isPending && statusMutation.variables?.item.id === selectedId} statusError={statusMutation.isError && statusMutation.variables?.item.id === selectedId} onRetryStatus={() => { if (statusMutation.variables) statusMutation.mutate(statusMutation.variables); }} />}
     </section>

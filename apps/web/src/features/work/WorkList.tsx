@@ -40,7 +40,7 @@ export function WorkList({ items, onOpen, onStatus, pendingStatusId, failedStatu
     return (
     <div>
       <button type="button" disabled={pendingStatusId === item.id} onClick={() => onStatus(item, next)} aria-label={`Move ${item.title} to ${statusLabels[next]}`} className={`min-h-11 rounded-lg border px-2.5 text-xs font-semibold hover:brightness-95 active:brightness-90 ${statusClasses[item.status]}`}>{pendingStatusId === item.id ? 'Moving…' : statusLabels[item.status]}</button>
-      {failedStatusId === item.id && <div className="mt-1 text-xs text-red-700" role="alert">Update failed. <button type="button" onClick={onRetryStatus} className="font-semibold underline">Retry</button></div>}
+      {failedStatusId === item.id && <div className="mt-1 text-xs text-red-700" role="alert">Update failed. <button type="button" onClick={onRetryStatus} className="min-h-11 rounded px-1 font-semibold underline">Retry</button></div>}
     </div>
     );
   };
@@ -51,12 +51,12 @@ export function WorkList({ items, onOpen, onStatus, pendingStatusId, failedStatu
           <caption className="sr-only">Team work items</caption>
           <thead className="border-b bg-slate-50 text-xs font-semibold uppercase tracking-wide text-muted">
             <tr>
-              <th scope="col" className="w-[35%] px-4 py-3 lg:w-[34%]">Work item</th>
-              <th scope="col" className="w-[20%] px-4 py-3 lg:w-[18%]">Owner</th>
-              <th scope="col" className="w-[18%] px-4 py-3 lg:w-[15%]">Status</th>
-              <th scope="col" className="hidden w-[12%] px-4 py-3 lg:table-cell">Priority</th>
-              <th scope="col" className="w-[27%] px-4 py-3 lg:w-[13%]">Due</th>
-              <th scope="col" className="hidden w-[16%] px-4 py-3 xl:table-cell">Updated</th>
+              <th scope="col" className="w-[35%] px-4 py-3 lg:w-[34%] xl:w-[28%]">Work item</th>
+              <th scope="col" className="w-[20%] px-4 py-3 lg:w-[18%] xl:w-[16%]">Owner</th>
+              <th scope="col" className="w-[18%] px-4 py-3 lg:w-[15%] xl:w-[14%]">Status</th>
+              <th scope="col" className="hidden w-[12%] px-4 py-3 lg:table-cell xl:w-[10%]">Priority</th>
+              <th scope="col" className="w-[27%] px-4 py-3 lg:w-[13%] xl:w-[14%]">Due</th>
+              <th scope="col" className="hidden w-[18%] px-4 py-3 xl:table-cell">Updated</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -70,7 +70,7 @@ export function WorkList({ items, onOpen, onStatus, pendingStatusId, failedStatu
                 <td className="px-4 py-3">{statusControl(item)}</td>
                 <td className="hidden px-4 py-3 lg:table-cell"><Priority item={item} /></td>
                 <td className="px-4 py-3"><Due item={item} /></td>
-                <td className="hidden px-4 py-3 text-muted xl:table-cell">{new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(item.updatedAt))}</td>
+                <td className="hidden px-4 py-3 text-muted xl:table-cell"><time dateTime={item.updatedAt}>{new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(item.updatedAt))}</time></td>
               </tr>
             ))}
           </tbody>
@@ -81,8 +81,8 @@ export function WorkList({ items, onOpen, onStatus, pendingStatusId, failedStatu
         {items.map((item) => (
           <li key={item.id} className="min-w-0 rounded-xl border bg-white p-4 shadow-subtle">
             <div className="flex min-w-0 items-start justify-between gap-3">
-              <h2 className="min-w-0 text-base font-semibold leading-6"><button type="button" onClick={() => onOpen(item.id)} className="min-h-11 text-left text-primary underline-offset-2 hover:underline active:text-blue-900" title={item.title}>{item.title}</button></h2>
-              <StatusBadge item={item} />
+              <h2 className="min-w-0 flex-1 text-base font-semibold leading-6"><button type="button" onClick={() => onOpen(item.id)} className="min-h-11 max-w-full text-left text-primary [overflow-wrap:anywhere] underline-offset-2 hover:underline active:text-blue-900" title={item.title}>{item.title}</button></h2>
+              <span className="shrink-0"><StatusBadge item={item} /></span>
             </div>
             <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-3 text-sm">
               <div className="min-w-0"><span className="mb-1 block text-xs font-medium text-muted">Owner</span><Owner item={item} /></div>

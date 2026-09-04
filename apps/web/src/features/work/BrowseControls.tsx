@@ -176,6 +176,7 @@ export function BrowseControls({ state, users, onChange, onClear }: Props) {
   );
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [draft, setDraft] = useState(state);
+  const filterButton = useRef<HTMLButtonElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLElement | null>(null);
   const activeCount = filterKeys.filter(
@@ -188,7 +189,9 @@ export function BrowseControls({ state, users, onChange, onClear }: Props) {
   useEffect(() => () => clearTimeout(searchTimer.current), []);
   useEffect(() => {
     if (!filtersOpen) return;
-    closeButton.current?.focus();
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    closeButton.current?.focus({ preventScroll: true });
     const focusable = () =>
       Array.from(
         panelRef.current?.querySelectorAll<HTMLElement>(
@@ -204,23 +207,31 @@ export function BrowseControls({ state, users, onChange, onClear }: Props) {
       if (event.key !== "Tab" || !panelRef.current) return;
       const controls = focusable();
       if (!controls.length) return;
-      const currentIndex = controls.indexOf(
-        document.activeElement as HTMLElement,
-      );
-      const nextIndex = event.shiftKey
-        ? currentIndex <= 0
-          ? controls.length - 1
-          : currentIndex - 1
-        : currentIndex === -1
-          ? 0
-          : currentIndex === controls.length - 1
-            ? 0
-            : currentIndex + 1;
-      event.preventDefault();
-      controls[nextIndex]?.focus();
+      const first = controls[0]!;
+      const last = controls[controls.length - 1]!;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      } else if (!panelRef.current.contains(document.activeElement)) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    const desktop = window.matchMedia?.("(min-width: 768px)");
+    const closeAtDesktop = (event: MediaQueryListEvent) => {
+      if (event.matches) setFiltersOpen(false);
+    };
+    desktop?.addEventListener?.("change", closeAtDesktop);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      desktop?.removeEventListener?.("change", closeAtDesktop);
+      document.body.style.overflow = originalOverflow;
+      filterButton.current?.focus({ preventScroll: true });
+    };
   }, [filtersOpen]);
 
   const changeSearch = (value: string) => {
@@ -261,7 +272,10 @@ export function BrowseControls({ state, users, onChange, onClear }: Props) {
         </label>
         <button
           type="button"
+          ref={filterButton}
           onClick={openFilters}
+          aria-expanded={filtersOpen}
+          aria-controls="mobile-filters"
           className="min-h-11 shrink-0 rounded-lg border bg-white px-4 text-sm font-semibold shadow-subtle hover:border-slate-400 hover:bg-slate-50 active:bg-slate-100 md:hidden"
         >
           Filters
@@ -292,7 +306,7 @@ export function BrowseControls({ state, users, onChange, onClear }: Props) {
       {filtersOpen && (
         <div
           className="fixed inset-0 z-40 flex items-end bg-slate-950/45 md:hidden"
-          onMouseDown={(event) => {
+          onClick={(event) => {
             if (event.target === event.currentTarget) setFiltersOpen(false);
           }}
         >
@@ -301,7 +315,9 @@ export function BrowseControls({ state, users, onChange, onClear }: Props) {
             role="dialog"
             aria-modal="true"
             aria-labelledby="filters-heading"
-            className="max-h-[92vh] w-full overflow-y-auto rounded-t-2xl bg-white p-5 shadow-overlay"
+            id="mobile-filters"
+            tabIndex={-1}
+            className="max-h-[92dvh] w-full min-w-0 overscroll-contain overflow-y-auto overflow-x-hidden rounded-t-2xl bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-overlay"
           >
             <div className="flex items-center justify-between">
               <h2 id="filters-heading" className="text-xl font-semibold">
@@ -425,9 +441,9 @@ function ActiveFilters({
           key={filter.key}
           type="button"
           onClick={() => onRemove(filter.key)}
-          className="min-h-9 max-w-full rounded-full border border-blue-200 bg-blue-50 px-3 text-xs font-semibold text-blue-900 hover:border-blue-400 hover:bg-blue-100 active:bg-blue-200"
+          className="min-h-11 max-w-full rounded-full border border-blue-200 bg-blue-50 px-3 text-xs font-semibold text-blue-900 hover:border-blue-400 hover:bg-blue-100 active:bg-blue-200"
         >
-          <span className="inline-block max-w-[16rem] truncate align-bottom">
+          <span className="inline-block max-w-[min(16rem,calc(100vw-7rem))] truncate align-bottom">
             {filter.label}
           </span>
           <span className="ml-2" aria-hidden="true">
@@ -439,7 +455,7 @@ function ActiveFilters({
       <button
         type="button"
         onClick={onClear}
-        className="min-h-9 rounded-lg px-2 text-xs font-semibold text-blue-800 hover:bg-blue-50 active:bg-blue-100"
+        className="min-h-11 rounded-lg px-2 text-xs font-semibold text-blue-800 hover:bg-blue-50 active:bg-blue-100"
       >
         Clear all
       </button>
