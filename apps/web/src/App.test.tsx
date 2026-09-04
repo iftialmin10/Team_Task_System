@@ -9,7 +9,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { MemoryRouter, useLocation } from "react-router-dom";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 import { server } from "./mocks/server";
 
@@ -85,6 +85,27 @@ describe("core browse experience", () => {
     expect(screen.getByTestId("location").textContent).toBe(
       "/work?priority=urgent",
     );
+  });
+
+  it("copies a link that preserves the current filtered view", async () => {
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+
+    renderApp("/work?status=in_progress&sort=updatedAt&order=desc&page=2&pageSize=50");
+    await screen.findByText("90 items in this view");
+    await user.click(screen.getByRole("button", { name: "Share With Colleagues" }));
+
+    expect(writeText).toHaveBeenCalledWith(
+      `${window.location.origin}/work?status=in_progress&sort=updatedAt&order=desc&page=2&pageSize=50`,
+    );
+    expect(screen.getByText("Link copied")).toBeTruthy();
+    await waitFor(() => expect(screen.queryByText("Link copied")).toBeNull(), {
+      timeout: 3500,
+    });
   });
 
   it("keeps keyboard focus contained inside the mobile filter sheet", async () => {

@@ -1,7 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Priority, WorkItem, WorkItemListResponse, WorkStatus } from '@team-task-system/contracts';
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { BrowseControls } from '../features/work/BrowseControls';
 import { Pagination } from '../features/work/Pagination';
 import { WorkList, WorkListSkeleton } from '../features/work/WorkList';
@@ -11,10 +11,12 @@ import { parseBrowseState, serializeBrowseState, updateBrowseState, type BrowseS
 import { getUsers, getWorkItems, updateWorkItem, updateWorkItemStatus } from '../services/api';
 
 export function WorkPage() {
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const [creating, setCreating] = useState(false);
   const [announcement, setAnnouncement] = useState('');
+  const [shareStatus, setShareStatus] = useState('');
   const state = useMemo(() => parseBrowseState(searchParams), [searchParams]);
   const selectedId = searchParams.get('item')?.trim().slice(0, 64) || undefined;
   const canonicalParams = useMemo(() => {
@@ -79,6 +81,12 @@ export function WorkPage() {
     if (totalPages && state.page > totalPages) setSearchParams(serializeBrowseState({ ...state, page: totalPages }), { replace: true });
   }, [setSearchParams, state, workQuery.data?.pagination.totalPages]);
 
+  useEffect(() => {
+    if (!shareStatus) return;
+    const timeout = window.setTimeout(() => setShareStatus(''), 3000);
+    return () => window.clearTimeout(timeout);
+  }, [shareStatus]);
+
   const changeState = (changes: Partial<BrowseState>, options: { replace?: boolean; resetPage?: boolean } = {}) => {
     const params = serializeBrowseState(updateBrowseState(state, changes, options.resetPage));
     if (selectedId) params.set('item', selectedId);
@@ -89,6 +97,17 @@ export function WorkPage() {
   const pagination = workQuery.data?.pagination;
   const openItem = (id: string) => { const params = new URLSearchParams(canonicalParams); params.set('item', id); setSearchParams(params); };
   const closeItem = () => { const params = new URLSearchParams(canonicalParams); params.delete('item'); setSearchParams(params); };
+  const shareView = async () => {
+    const params = serializeBrowseState(state).toString();
+    const shareUrl = new URL(`${location.pathname}${params ? `?${params}` : ''}`, window.location.origin).toString();
+
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setShareStatus('Link copied');
+    } catch {
+      setShareStatus('Could not copy the link. Please try again.');
+    }
+  };
 
   return (
     <section aria-labelledby="work-heading">
@@ -105,7 +124,27 @@ export function WorkPage() {
 
       <BrowseControls state={state} users={usersQuery.data ?? []} onChange={changeState} onClear={clearFilters} />
 
-      <div className="relative mt-5" aria-busy={workQuery.isFetching}>
+      <div className="mt-5 flex min-h-11 items-center justify-end">
+        <button
+          type="button"
+          onClick={() => void shareView()}
+          className="min-h-11 rounded-lg border bg-white px-4 text-sm font-semibold text-ink shadow-subtle hover:border-slate-400 hover:bg-slate-50 active:bg-slate-100"
+        >
+          Share With Colleagues
+        </button>
+      </div>
+
+      {shareStatus && (
+        <div
+          className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-lg bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-lg sm:bottom-6 sm:left-auto sm:right-6 sm:translate-x-0"
+          role="status"
+          aria-live="polite"
+        >
+          {shareStatus}
+        </div>
+      )}
+
+      <div className="relative mt-3" aria-busy={workQuery.isFetching}>
         {workQuery.isFetching && !workQuery.isPending && <div className="absolute -top-3 right-0 flex items-center gap-2 text-xs font-medium text-muted" role="status"><span className="h-2 w-2 animate-pulse rounded-full bg-blue-600" />Updating results…</div>}
         {workQuery.isPending && <WorkListSkeleton />}
         {workQuery.isError && (
