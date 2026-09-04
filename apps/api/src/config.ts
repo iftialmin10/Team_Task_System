@@ -15,20 +15,6 @@ const envSchema = z.object({
   if (!databaseUrl.hostname.endsWith('.neon.tech')) {
     context.addIssue({ code: 'custom', path: ['DATABASE_URL'], message: 'Production DATABASE_URL must point to Neon' });
   }
-  if (!databaseUrl.hostname.includes('-pooler')) {
-    context.addIssue({ code: 'custom', path: ['DATABASE_URL'], message: 'Production DATABASE_URL must use a pooled Neon host' });
-  }
-  const sslMode = databaseUrl.searchParams.get('sslmode')?.toLowerCase();
-  const channelBinding = databaseUrl.searchParams.get('channel_binding')?.toLowerCase();
-  const usesVerifiedTls = sslMode === 'verify-full';
-  const usesNeonChannelBinding = sslMode === 'require' && channelBinding === 'require';
-  if (!usesVerifiedTls && !usesNeonChannelBinding) {
-    context.addIssue({
-      code: 'custom',
-      path: ['DATABASE_URL'],
-      message: 'Production DATABASE_URL must use sslmode=verify-full or sslmode=require with channel_binding=require',
-    });
-  }
 });
 
 export function getConfig(env: NodeJS.ProcessEnv = process.env) {

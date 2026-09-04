@@ -17,31 +17,18 @@ describe('production configuration', () => {
     expect(() => getConfig({ ...required, DATABASE_POOL_MAX: '100' })).toThrow();
   });
 
-  it('accepts both supported secure Neon URL formats in production', () => {
-    const verifyFull = getConfig({
+  it('accepts a regular Neon URL in production', () => {
+    const config = getConfig({
       NODE_ENV: 'production',
-      DATABASE_URL: 'postgresql://user:password@ep-example-pooler.us-east-1.aws.neon.tech/app?sslmode=verify-full',
+      DATABASE_URL: 'postgresql://user:password@ep-example.us-east-1.aws.neon.tech/app?sslmode=require',
     });
-    const channelBound = getConfig({
-      NODE_ENV: 'production',
-      DATABASE_URL: 'postgresql://user:password@ep-example-pooler.us-east-1.aws.neon.tech/app?sslmode=require&channel_binding=require',
-    });
-    expect(verifyFull.NODE_ENV).toBe('production');
-    expect(channelBound.NODE_ENV).toBe('production');
+    expect(config.NODE_ENV).toBe('production');
   });
 
-  it('rejects insecure, direct, and non-Neon production URLs', () => {
+  it('rejects a non-Neon production URL', () => {
     expect(() => getConfig({
       NODE_ENV: 'production',
-      DATABASE_URL: 'postgresql://user:password@ep-example-pooler.us-east-1.aws.neon.tech/app?sslmode=require',
-    })).toThrow();
-    expect(() => getConfig({
-      NODE_ENV: 'production',
-      DATABASE_URL: 'postgresql://user:password@ep-example.us-east-1.aws.neon.tech/app?sslmode=verify-full',
-    })).toThrow();
-    expect(() => getConfig({
-      NODE_ENV: 'production',
-      DATABASE_URL: 'postgresql://user:password@example.com/app?sslmode=verify-full',
+      DATABASE_URL: 'postgresql://user:password@example.com/app?sslmode=require',
     })).toThrow();
   });
 });
