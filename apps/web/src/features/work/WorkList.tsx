@@ -1,18 +1,5 @@
-import type { WorkItem, WorkStatus } from '@team-task-system/contracts';
+import { PRIORITIES, WORK_STATUSES, type Priority, type WorkItem, type WorkStatus } from '@team-task-system/contracts';
 import { getDuePresentation, priorityClasses, priorityLabels, statusClasses, statusLabels } from './presentation';
-
-function StatusBadge({ item }: { item: WorkItem }) {
-  return <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${statusClasses[item.status]}`}>{statusLabels[item.status]}</span>;
-}
-
-function Priority({ item }: { item: WorkItem }) {
-  const notable = item.priority !== 'NORMAL';
-  return (
-    <span className={`inline-flex items-center gap-1 rounded-full ${notable ? 'border px-2 py-0.5 text-xs' : 'text-sm'} ${priorityClasses[item.priority]}`}>
-      {item.priority === 'URGENT' && <span aria-hidden="true">!</span>}{priorityLabels[item.priority]}
-    </span>
-  );
-}
 
 function Owner({ item }: { item: WorkItem }) {
   return item.owner
@@ -26,24 +13,46 @@ function Due({ item }: { item: WorkItem }) {
   return <span className={classes}>{due.label}</span>;
 }
 
-export function WorkList({ items, onOpen, onStatus, pendingStatusId, failedStatusId, onRetryStatus }: {
+export function WorkList({ items, onOpen, onStatus, onPriority, pendingStatusId, pendingPriorityId, failedStatusId, failedPriorityId, onRetryStatus, onRetryPriority }: {
   items: WorkItem[];
   onOpen: (id: string) => void;
   onStatus: (item: WorkItem, status: WorkStatus) => void;
+  onPriority: (item: WorkItem, priority: Priority) => void;
   pendingStatusId: string | undefined;
+  pendingPriorityId: string | undefined;
   failedStatusId: string | undefined;
+  failedPriorityId: string | undefined;
   onRetryStatus: () => void;
+  onRetryPriority: () => void;
 }) {
-  const statusControl = (item: WorkItem) => {
-    const stages: WorkStatus[] = ['BACKLOG', 'READY', 'IN_PROGRESS', 'DONE'];
-    const next = stages[(stages.indexOf(item.status) + 1) % stages.length]!;
-    return (
-    <div>
-      <button type="button" disabled={pendingStatusId === item.id} onClick={() => onStatus(item, next)} aria-label={`Move ${item.title} to ${statusLabels[next]}`} className={`min-h-11 rounded-lg border px-2.5 text-xs font-semibold hover:brightness-95 active:brightness-90 ${statusClasses[item.status]}`}>{pendingStatusId === item.id ? 'Moving…' : statusLabels[item.status]}</button>
+  const statusControl = (item: WorkItem) => (
+    <div className="min-w-0">
+      <select
+        value={item.status}
+        disabled={pendingStatusId === item.id || pendingPriorityId === item.id}
+        onChange={(event) => onStatus(item, event.target.value as WorkStatus)}
+        aria-label={`Change status for ${item.title}`}
+        className={`min-h-11 w-full min-w-0 rounded-lg border px-2 text-xs font-semibold hover:brightness-95 disabled:cursor-wait disabled:opacity-70 sm:px-2.5 ${statusClasses[item.status]}`}
+      >
+        {WORK_STATUSES.map((status) => <option key={status} value={status}>{statusLabels[status]}</option>)}
+      </select>
       {failedStatusId === item.id && <div className="mt-1 text-xs text-red-700" role="alert">Update failed. <button type="button" onClick={onRetryStatus} className="min-h-11 rounded px-1 font-semibold underline">Retry</button></div>}
     </div>
-    );
-  };
+  );
+  const priorityControl = (item: WorkItem) => (
+    <div className="min-w-0">
+      <select
+        value={item.priority}
+        disabled={pendingStatusId === item.id || pendingPriorityId === item.id}
+        onChange={(event) => onPriority(item, event.target.value as Priority)}
+        aria-label={`Change priority for ${item.title}`}
+        className={`min-h-11 w-full min-w-0 rounded-lg border px-2 text-xs font-semibold hover:brightness-95 disabled:cursor-wait disabled:opacity-70 sm:px-2.5 ${priorityClasses[item.priority]}`}
+      >
+        {PRIORITIES.map((priority) => <option key={priority} value={priority}>{priorityLabels[priority]}</option>)}
+      </select>
+      {failedPriorityId === item.id && <div className="mt-1 text-xs text-red-700" role="alert">Priority update failed. <button type="button" onClick={onRetryPriority} className="min-h-11 rounded px-1 font-semibold underline">Retry</button></div>}
+    </div>
+  );
   return (
     <>
       <div className="hidden overflow-hidden rounded-xl border bg-white shadow-subtle md:block">
@@ -51,25 +60,24 @@ export function WorkList({ items, onOpen, onStatus, pendingStatusId, failedStatu
           <caption className="sr-only">Team work items</caption>
           <thead className="border-b bg-slate-50 text-xs font-semibold uppercase tracking-wide text-muted">
             <tr>
-              <th scope="col" className="w-[35%] px-4 py-3 lg:w-[34%] xl:w-[28%]">Work item</th>
-              <th scope="col" className="w-[20%] px-4 py-3 lg:w-[18%] xl:w-[16%]">Owner</th>
-              <th scope="col" className="w-[18%] px-4 py-3 lg:w-[15%] xl:w-[14%]">Status</th>
-              <th scope="col" className="hidden w-[12%] px-4 py-3 lg:table-cell xl:w-[10%]">Priority</th>
-              <th scope="col" className="w-[27%] px-4 py-3 lg:w-[13%] xl:w-[14%]">Due</th>
+              <th scope="col" className="w-[27%] px-3 py-3 lg:w-[30%] lg:px-4 xl:w-[26%]">Work item</th>
+              <th scope="col" className="w-[18%] px-3 py-3 lg:px-4 xl:w-[16%]">Owner</th>
+              <th scope="col" className="w-[19%] px-2 py-3 lg:w-[16%] lg:px-4 xl:w-[14%]">Status</th>
+              <th scope="col" className="w-[17%] px-2 py-3 lg:w-[15%] lg:px-4 xl:w-[12%]">Priority</th>
+              <th scope="col" className="w-[19%] px-3 py-3 lg:w-[21%] lg:px-4 xl:w-[14%]">Due</th>
               <th scope="col" className="hidden w-[18%] px-4 py-3 xl:table-cell">Updated</th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {items.map((item) => (
               <tr key={item.id} className="min-h-14 hover:bg-slate-50">
-                <th scope="row" className="px-4 py-3 font-semibold">
+                <th scope="row" className="px-3 py-3 font-semibold lg:px-4">
                   <button type="button" onClick={() => onOpen(item.id)} className="block min-h-11 w-full truncate rounded-md text-left text-primary underline-offset-2 hover:underline active:text-blue-900" title={item.title}>{item.title}</button>
-                  {item.priority !== 'NORMAL' && <span className="mt-1 inline-flex lg:hidden"><Priority item={item} /></span>}
                 </th>
-                <td className="px-4 py-3"><Owner item={item} /></td>
-                <td className="px-4 py-3">{statusControl(item)}</td>
-                <td className="hidden px-4 py-3 lg:table-cell"><Priority item={item} /></td>
-                <td className="px-4 py-3"><Due item={item} /></td>
+                <td className="px-3 py-3 lg:px-4"><Owner item={item} /></td>
+                <td className="px-2 py-3 lg:px-4">{statusControl(item)}</td>
+                <td className="px-2 py-3 lg:px-4">{priorityControl(item)}</td>
+                <td className="px-3 py-3 lg:px-4"><Due item={item} /></td>
                 <td className="hidden px-4 py-3 text-muted xl:table-cell"><time dateTime={item.updatedAt}>{new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(item.updatedAt))}</time></td>
               </tr>
             ))}
@@ -80,15 +88,12 @@ export function WorkList({ items, onOpen, onStatus, pendingStatusId, failedStatu
       <ul className="grid gap-3 md:hidden" aria-label="Team work items">
         {items.map((item) => (
           <li key={item.id} className="min-w-0 rounded-xl border bg-white p-4 shadow-subtle">
-            <div className="flex min-w-0 items-start justify-between gap-3">
-              <h2 className="min-w-0 flex-1 text-base font-semibold leading-6"><button type="button" onClick={() => onOpen(item.id)} className="min-h-11 max-w-full text-left text-primary [overflow-wrap:anywhere] underline-offset-2 hover:underline active:text-blue-900" title={item.title}>{item.title}</button></h2>
-              <span className="shrink-0"><StatusBadge item={item} /></span>
-            </div>
+            <h2 className="min-w-0 text-base font-semibold leading-6"><button type="button" onClick={() => onOpen(item.id)} className="min-h-11 max-w-full text-left text-primary [overflow-wrap:anywhere] underline-offset-2 hover:underline active:text-blue-900" title={item.title}>{item.title}</button></h2>
             <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-3 text-sm">
+              <div className="min-w-0"><span className="mb-1 block text-xs font-medium text-muted">Status</span>{statusControl(item)}</div>
+              <div className="min-w-0"><span className="mb-1 block text-xs font-medium text-muted">Priority</span>{priorityControl(item)}</div>
               <div className="min-w-0"><span className="mb-1 block text-xs font-medium text-muted">Owner</span><Owner item={item} /></div>
-              <div><span className="mb-1 block text-xs font-medium text-muted">Priority</span><Priority item={item} /></div>
-              <div className="col-span-2"><span className="mb-1 block text-xs font-medium text-muted">Due</span><Due item={item} /></div>
-              <div className="col-span-2"><span className="mb-1 block text-xs font-medium text-muted">Move to next stage</span>{statusControl(item)}</div>
+              <div className="min-w-0"><span className="mb-1 block text-xs font-medium text-muted">Due</span><Due item={item} /></div>
             </div>
           </li>
         ))}

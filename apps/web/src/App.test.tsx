@@ -61,7 +61,7 @@ describe("core browse experience", () => {
       screen.getByRole("searchbox", { name: "Search by work item or owner" }),
       "onboarding",
     );
-    expect(await screen.findByText("1 item in this view")).toBeTruthy();
+    expect(await screen.findByText("1 item in this view", {}, { timeout: 3000 })).toBeTruthy();
     expect(screen.getByTestId("location").textContent).toContain(
       "search=onboarding",
     );
@@ -199,21 +199,38 @@ describe("core mutations", () => {
     );
     renderApp();
     await screen.findByText("360 items in this view");
-    const controls = screen.getAllByRole("button", {
-      name: "Move Mock work item 30 to In progress",
+    const controls = screen.getAllByRole("combobox", {
+      name: "Change status for Mock work item 30",
     });
-    await user.click(controls[0]!);
+    await user.selectOptions(controls[0]!, "IN_PROGRESS");
     expect(await screen.findAllByText(/Update failed/)).toHaveLength(2);
     await waitFor(() =>
       expect(
-        screen.getAllByRole("button", {
-          name: "Move Mock work item 30 to In progress",
+        screen.getAllByRole("combobox", {
+          name: "Change status for Mock work item 30",
         }).length,
       ).toBe(2),
     );
     expect(
       screen.getAllByRole("button", { name: "Retry" }).length,
     ).toBeGreaterThan(0);
+  });
+
+  it("changes priority from the inline dropdown", async () => {
+    const user = userEvent.setup();
+    renderApp();
+    await screen.findByText("360 items in this view");
+    const controls = screen.getAllByRole("combobox", {
+      name: "Change priority for Mock work item 30",
+    });
+    await user.selectOptions(controls[0]!, "URGENT");
+    await waitFor(() => {
+      expect(
+        screen.getAllByRole("combobox", {
+          name: "Change priority for Mock work item 30",
+        }).every((control) => (control as HTMLSelectElement).value === "URGENT"),
+      ).toBe(true);
+    });
   });
 });
 

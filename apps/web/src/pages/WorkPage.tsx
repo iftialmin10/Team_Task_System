@@ -1,5 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { WorkItem, WorkItemListResponse, WorkStatus } from '@team-task-system/contracts';
+import type { Priority, WorkItem, WorkItemListResponse, WorkStatus } from '@team-task-system/contracts';
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { BrowseControls } from '../features/work/BrowseControls';
@@ -8,7 +8,7 @@ import { WorkList, WorkListSkeleton } from '../features/work/WorkList';
 import { CreateWorkDialog } from '../features/work/CreateWorkDialog';
 import { WorkItemDetails } from '../features/work/WorkItemDetails';
 import { parseBrowseState, serializeBrowseState, updateBrowseState, type BrowseState } from '../features/work/query-state';
-import { getUsers, getWorkItems, updateWorkItemStatus } from '../services/api';
+import { getUsers, getWorkItems, updateWorkItem, updateWorkItemStatus } from '../services/api';
 
 export function WorkPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -47,6 +47,26 @@ export function WorkPage() {
       setAnnouncement(`Could not update ${item.title}. The previous status was restored.`);
     },
     onSuccess: (item) => { queryClient.setQueryData(['work-item', item.id], item); setAnnouncement(`${item.title} moved to ${item.status.toLowerCase().replace('_', ' ')}.`); },
+    onSettled: () => void queryClient.invalidateQueries({ queryKey: ['work-items'] }),
+  });
+  const priorityMutation = useMutation({
+    mutationFn: ({ item, priority }: { item: WorkItem; priority: Priority }) => updateWorkItem(item.id, { priority }),
+    onMutate: async ({ item, priority }) => {
+      setAnnouncement(`Changing ${item.title} priority to ${priority.toLowerCase()}.`);
+      await queryClient.cancelQueries({ queryKey: ['work-items'] });
+      const lists = queryClient.getQueriesData<WorkItemListResponse>({ queryKey: ['work-items'] });
+      const detail = queryClient.getQueryData<WorkItem>(['work-item', item.id]);
+      const optimistic = { ...item, priority, updatedAt: new Date().toISOString() };
+      queryClient.setQueriesData<WorkItemListResponse>({ queryKey: ['work-items'] }, (current) => current ? { ...current, data: current.data.map((entry) => entry.id === item.id ? optimistic : entry) } : current);
+      if (detail) queryClient.setQueryData(['work-item', item.id], { ...detail, priority, updatedAt: optimistic.updatedAt });
+      return { lists, detail };
+    },
+    onError: (_error, { item }, context) => {
+      context?.lists.forEach(([key, data]) => queryClient.setQueryData(key, data));
+      if (context?.detail) queryClient.setQueryData(['work-item', item.id], context.detail);
+      setAnnouncement(`Could not update ${item.title}. The previous priority was restored.`);
+    },
+    onSuccess: (item) => { queryClient.setQueryData(['work-item', item.id], item); setAnnouncement(`${item.title} priority changed to ${item.priority.toLowerCase()}.`); },
     onSettled: () => void queryClient.invalidateQueries({ queryKey: ['work-items'] }),
   });
 
@@ -95,7 +115,7 @@ export function WorkPage() {
             <button type="button" onClick={() => void workQuery.refetch()} className="mt-5 min-h-11 rounded-lg border border-red-400 bg-white px-4 text-sm font-semibold text-red-900 hover:bg-red-100 active:bg-red-200">Retry</button>
           </div>
         )}
-        {workQuery.isSuccess && workQuery.data.data.length > 0 && <WorkList items={workQuery.data.data} onOpen={openItem} onStatus={(item, status) => { statusMutation.reset(); statusMutation.mutate({ item, status }); }} pendingStatusId={statusMutation.isPending ? statusMutation.variables?.item.id : undefined} failedStatusId={statusMutation.isError ? statusMutation.variables?.item.id : undefined} onRetryStatus={() => { if (statusMutation.variables) statusMutation.mutate(statusMutation.variables); }} />}
+        {workQuery.isSuccess && workQuery.data.data.length > 0 && <WorkList items={workQuery.data.data} onOpen={openItem} onStatus={(item, status) => { statusMutation.reset(); statusMutation.mutate({ item, status }); }} onPriority={(item, priority) => { priorityMutation.reset(); priorityMutation.mutate({ item, priority }); }} pendingStatusId={statusMutation.isPending ? statusMutation.variables?.item.id : undefined} pendingPriorityId={priorityMutation.isPending ? priorityMutation.variables?.item.id : undefined} failedStatusId={statusMutation.isError ? statusMutation.variables?.item.id : undefined} failedPriorityId={priorityMutation.isError ? priorityMutation.variables?.item.id : undefined} onRetryStatus={() => { if (statusMutation.variables) statusMutation.mutate(statusMutation.variables); }} onRetryPriority={() => { if (priorityMutation.variables) priorityMutation.mutate(priorityMutation.variables); }} />}
         {workQuery.isSuccess && workQuery.data.data.length === 0 && (
           <div className="rounded-xl border bg-white px-5 py-12 text-center shadow-subtle">
             <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-xl" aria-hidden="true">{hasNarrowing ? '⌕' : '＋'}</div>
