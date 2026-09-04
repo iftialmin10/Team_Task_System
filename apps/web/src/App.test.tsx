@@ -151,6 +151,25 @@ describe("core browse experience", () => {
 });
 
 describe("core mutations", () => {
+  it("matches and selects an owner by typing only in the Add work dialog", async () => {
+    const user = userEvent.setup();
+    renderApp();
+    await screen.findByText("360 items in this view");
+    await user.click(screen.getByRole("button", { name: "Add work" }));
+
+    const dialog = screen.getByRole("dialog", { name: "Add work" });
+    const owner = within(dialog).getByRole("combobox", { name: "Owner" });
+    expect(owner.tagName).toBe("INPUT");
+
+    await user.type(owner, "sam");
+    expect(within(dialog).getByRole("option", { name: /Samira Khan/ })).toBeTruthy();
+    expect(within(dialog).queryByRole("option", { name: /Alexandra Montgomery-Jones/ })).toBeNull();
+
+    await user.keyboard("{ArrowDown}{Enter}");
+    expect((owner as HTMLInputElement).value).toBe("Samira Khan");
+    expect(owner.getAttribute("aria-expanded")).toBe("false");
+  });
+
   it("creates a work item and preserves the form until the request succeeds", async () => {
     const user = userEvent.setup();
     renderApp();
@@ -179,6 +198,7 @@ describe("core mutations", () => {
       "item=mock_001",
     );
     await user.click(screen.getByRole("button", { name: "Edit work" }));
+    expect(within(dialog).getByLabelText("Owner").tagName).toBe("SELECT");
     const description = screen.getByLabelText(/Description/);
     await user.clear(description);
     await user.type(description, "Updated launch details");
