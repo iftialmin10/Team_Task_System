@@ -8,14 +8,21 @@
     "packages/*"
   ],
   "scripts": {
+    "predev": "npm run db:generate",
     "dev": "concurrently -n web,api -c cyan,green \"npm run dev -w @team-task-system/web\" \"npm run dev -w @team-task-system/api\"",
+    "prebuild": "npm run db:generate",
     "build": "npm run build -w @team-task-system/contracts && npm run build -w @team-task-system/api && npm run build -w @team-task-system/web",
+    "pretest": "npm run db:generate",
     "test": "npm run build -w @team-task-system/contracts && npm run test -w @team-task-system/contracts && npm run test -w @team-task-system/api && npm run test -w @team-task-system/web",
+    "pretypecheck": "npm run db:generate",
     "typecheck": "npm run build -w @team-task-system/contracts && npm run typecheck -w @team-task-system/api && npm run typecheck -w @team-task-system/web",
     "lint": "eslint .",
+    "start": "npm run start -w @team-task-system/api",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
+    "db:status": "prisma migrate status",
+    "predb:seed": "npm run db:generate",
     "db:seed": "prisma db seed",
     "db:verify": "tsx prisma/verify.ts"
   },

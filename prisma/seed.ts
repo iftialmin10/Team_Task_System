@@ -1,13 +1,31 @@
 import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { Pool } from 'pg';
 import { PrismaClient, Priority, WorkStatus } from '../apps/api/src/generated/prisma/client.js';
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error('DATABASE_URL is required');
 
-const adapter = new PrismaPg({ connectionString });
+const pool = new Pool({ connectionString, max: 1, enableChannelBinding: true });
+const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
-const anchor = new Date('2026-09-03T00:00:00.000Z');
+
+function todayInDhaka() {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Dhaka', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(new Date());
+  const get = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? '';
+  return `${get('year')}-${get('month')}-${get('day')}`;
+}
+
+const referenceDate = process.env.SEED_REFERENCE_DATE?.trim() || todayInDhaka();
+const parsedReferenceDate = new Date(`${referenceDate}T00:00:00.000Z`);
+if (!/^\d{4}-\d{2}-\d{2}$/.test(referenceDate)
+  || Number.isNaN(parsedReferenceDate.getTime())
+  || parsedReferenceDate.toISOString().slice(0, 10) !== referenceDate) {
+  throw new Error('SEED_REFERENCE_DATE must use YYYY-MM-DD');
+}
+const anchor = parsedReferenceDate;
 const day = 86_400_000;
 const statuses = Object.values(WorkStatus);
 const priorities = Object.values(Priority);
@@ -54,10 +72,13 @@ async function main() {
     };
   });
   await prisma.workItem.createMany({ data: records });
-  console.log(`Seeded ${people.length} users and ${records.length} work items.`);
+  console.log(`Seeded ${people.length} users and ${records.length} work items relative to ${referenceDate}.`);
 }
 
 main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
-}).finally(async () => prisma.$disconnect());
+}).finally(async () => {
+  await prisma.$disconnect();
+  await pool.end();
+});

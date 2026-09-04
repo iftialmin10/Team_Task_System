@@ -13,6 +13,7 @@ export function createDatabase(config: AppConfig): Database {
     connectionTimeoutMillis: config.DATABASE_CONNECT_TIMEOUT_MS,
     idleTimeoutMillis: config.DATABASE_IDLE_TIMEOUT_MS,
     allowExitOnIdle: config.NODE_ENV !== 'production',
+    enableChannelBinding: true,
   });
   return { prisma: new PrismaClient({ adapter: new PrismaPg(pool) }), pool };
 }
