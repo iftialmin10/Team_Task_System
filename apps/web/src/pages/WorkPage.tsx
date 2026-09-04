@@ -116,7 +116,7 @@ export function WorkPage() {
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">Shared workspace</p>
           <h1 id="work-heading" className="mt-2 text-[28px] font-bold leading-[34px] tracking-tight">Team work</h1>
           <p className="mt-2 max-w-2xl text-sm leading-5 text-muted">
-            {pagination ? `${pagination.totalItems} ${pagination.totalItems === 1 ? 'item' : 'items'} in this view` : 'Find, review, and move the team’s most important work forward.'}
+            Find, review, and move the team’s most important work forward.
           </p>
         </div>
         <button type="button" onClick={() => setCreating(true)} className="min-h-11 rounded-lg bg-primary px-4 text-sm font-semibold text-white shadow-subtle hover:bg-blue-800 active:bg-blue-900">Add work</button>

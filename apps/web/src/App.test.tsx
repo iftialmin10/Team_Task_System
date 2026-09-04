@@ -37,13 +37,19 @@ function renderApp(entry = "/work") {
   );
 }
 
+async function waitForWorkList() {
+  return screen.findByRole("table", { name: "Team work items" });
+}
+
 describe("core browse experience", () => {
   it("loads a URL-backed, paginated work list", async () => {
     renderApp("/work?status=in_progress&pageSize=50");
     expect(
       await screen.findByRole("heading", { name: "Team work" }),
     ).toBeTruthy();
-    expect(await screen.findByText("90 items in this view")).toBeTruthy();
+    expect(await waitForWorkList()).toBeTruthy();
+    expect(screen.getByText("Find, review, and move the team’s most important work forward.")).toBeTruthy();
+    expect(screen.queryByText("90 items in this view")).toBeNull();
     expect(screen.getByLabelText("Status")).toHaveProperty(
       "value",
       "IN_PROGRESS",
@@ -56,12 +62,12 @@ describe("core browse experience", () => {
   it("debounces search into the URL and shows a filtered result", async () => {
     const user = userEvent.setup();
     renderApp();
-    await screen.findByText("360 items in this view");
+    await waitForWorkList();
     await user.type(
       screen.getByRole("searchbox", { name: "Search by work item or owner" }),
       "onboarding",
     );
-    expect(await screen.findByText("1 item in this view", {}, { timeout: 3000 })).toBeTruthy();
+    expect(await screen.findAllByText(/Prepare customer onboarding guide/)).toBeTruthy();
     expect(screen.getByTestId("location").textContent).toContain(
       "search=onboarding",
     );
@@ -73,7 +79,7 @@ describe("core browse experience", () => {
   it("applies mobile filter drafts together", async () => {
     const user = userEvent.setup();
     renderApp();
-    await screen.findByText("360 items in this view");
+    await waitForWorkList();
     await user.click(screen.getByRole("button", { name: "Filters" }));
     await user.selectOptions(
       screen.getByLabelText("Priority", { selector: "#mobile-priority" }),
@@ -81,7 +87,11 @@ describe("core browse experience", () => {
     );
     expect(screen.getByTestId("location").textContent).toBe("/work");
     await user.click(screen.getByRole("button", { name: "Apply filters" }));
-    expect(await screen.findByText("120 items in this view")).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getAllByRole("combobox", { name: /Change priority for/ }).every(
+        (control) => (control as HTMLSelectElement).value === "URGENT",
+      )).toBe(true);
+    });
     expect(screen.getByTestId("location").textContent).toBe(
       "/work?priority=urgent",
     );
@@ -96,7 +106,7 @@ describe("core browse experience", () => {
     });
 
     renderApp("/work?status=in_progress&sort=updatedAt&order=desc&page=2&pageSize=50");
-    await screen.findByText("90 items in this view");
+    await waitForWorkList();
     await user.click(screen.getByRole("button", { name: "Share With Colleagues" }));
 
     expect(writeText).toHaveBeenCalledWith(
@@ -111,7 +121,7 @@ describe("core browse experience", () => {
   it("keeps keyboard focus contained inside the mobile filter sheet", async () => {
     const user = userEvent.setup();
     renderApp();
-    await screen.findByText("360 items in this view");
+    await waitForWorkList();
     await user.click(screen.getByRole("button", { name: "Filters" }));
     const dialog = screen.getByRole("dialog", { name: "Filter and sort" });
     const closeButton = within(dialog).getByRole("button", { name: "Close" });
@@ -175,7 +185,7 @@ describe("core mutations", () => {
   it("matches and selects an owner by typing only in the Add work dialog", async () => {
     const user = userEvent.setup();
     renderApp();
-    await screen.findByText("360 items in this view");
+    await waitForWorkList();
     await user.click(screen.getByRole("button", { name: "Add work" }));
 
     const dialog = screen.getByRole("dialog", { name: "Add work" });
@@ -194,7 +204,7 @@ describe("core mutations", () => {
   it("creates a work item and preserves the form until the request succeeds", async () => {
     const user = userEvent.setup();
     renderApp();
-    await screen.findByText("360 items in this view");
+    await waitForWorkList();
     await user.click(screen.getByRole("button", { name: "Add work" }));
     const dialog = screen.getByRole("dialog", { name: "Add work" });
     expect(dialog).toBeTruthy();
@@ -206,7 +216,7 @@ describe("core mutations", () => {
         "Coordinate launch review was added to the backlog.",
       ),
     ).toBeTruthy();
-    expect(await screen.findByText("361 items in this view")).toBeTruthy();
+    expect(screen.queryByText("361 items in this view")).toBeNull();
   });
 
   it("restores a URL-linked detail view and edits essential fields", async () => {
@@ -239,7 +249,7 @@ describe("core mutations", () => {
       ),
     );
     renderApp();
-    await screen.findByText("360 items in this view");
+    await waitForWorkList();
     const controls = screen.getAllByRole("combobox", {
       name: "Change status for Mock work item 30",
     });
@@ -260,7 +270,7 @@ describe("core mutations", () => {
   it("changes priority from the inline dropdown", async () => {
     const user = userEvent.setup();
     renderApp();
-    await screen.findByText("360 items in this view");
+    await waitForWorkList();
     const controls = screen.getAllByRole("combobox", {
       name: "Change priority for Mock work item 30",
     });
@@ -279,7 +289,7 @@ describe("accessibility and responsive hardening", () => {
   it("restores focus and page scrolling when the filter sheet closes", async () => {
     const user = userEvent.setup();
     renderApp();
-    await screen.findByText("360 items in this view");
+    await waitForWorkList();
     const trigger = screen.getByRole("button", { name: "Filters" });
 
     await user.click(trigger);
@@ -299,7 +309,7 @@ describe("accessibility and responsive hardening", () => {
   it("focuses and announces invalid form fields, then restores dialog focus", async () => {
     const user = userEvent.setup();
     renderApp();
-    await screen.findByText("360 items in this view");
+    await waitForWorkList();
     const trigger = screen.getByRole("button", { name: "Add work" });
 
     await user.click(trigger);
