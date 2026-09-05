@@ -6,19 +6,11 @@ A simple shared task tracker for small teams. It is designed to replace a spread
 
 ## Running the project
 
-You need Node.js 20.19 or newer and a Neon PostgreSQL database.
-
 ```bash
 git clone https://github.com/iftialmin10/Team_Task_System.git
 cd Team_Task_System
 npm install
 cp .env.example .env
-```
-
-On Windows PowerShell, use this instead of `cp`:
-
-```powershell
-Copy-Item .env.example .env
 ```
 
 Create a database in Neon, copy its connection string, and add it to `.env`:
@@ -34,7 +26,7 @@ npm run db:deploy
 npm run db:seed
 ```
 
-The seed command adds 10 users and 360 example work items. It replaces any existing users and work items in that database, so it should only be used with a development database.
+The seed command adds 10 users and 360 example work items.
 
 Start the app:
 
@@ -58,6 +50,10 @@ The web app runs at <http://localhost:5173> and the API runs at <http://localhos
 
 ![Desktop view at 1280 pixels](docs/screenshots/1280px.png)
 
+### Errors need a way to retry
+
+![Errors need a way to retry](docs/screenshots/Error.png)
+
 ## Data model
 
 The app uses two related models: `User` and `WorkItem`. One user can own many work items, while a work item can also be left unassigned.
@@ -72,7 +68,7 @@ A work item contains:
 - an optional due date; and
 - created and updated timestamps.
 
-This model is intentionally small. It stores the information needed to understand and manage a task without turning the app into a large project-management suite. Users are stored separately so owner details are not repeated on every item.
+Users are stored separately so owner details are not repeated on every item.
 
 ## Workflow
 
@@ -83,15 +79,12 @@ Work moves through four stages:
 3. **In progress** - someone is actively working on it.
 4. **Done** - the work is complete.
 
-Four stages felt like enough to show progress without creating too many similar states. A user can move an item directly to any stage, which also makes mistakes easy to correct.
 
 ## Product decisions
 
 ### Layout
 
 I chose a table/list instead of a Kanban board because the main job here is finding and comparing work across a few hundred items. Desktop shows the full table, tablet removes less important information, and mobile changes each row into a card so there is no horizontal scrolling.
-
-Status and priority can be changed directly from the list. Overdue dates are written clearly instead of being shown only through color.
 
 ### First screen
 
@@ -110,6 +103,5 @@ I left out authentication, permissions, comments, attachments, notifications, su
 ## Decisions I am least confident about
 
 1. **Using a list instead of Kanban.** The list is easier to search and scan, but Kanban would make workflow stages more visual. Both views could be offered in a later version.
-2. **Keeping only four fixed stages.** Some teams will want a Blocked or Review stage. An alternative would be configurable stages or a separate blocked flag.
-3. **Using numbered pagination.** It keeps pages fast and shareable, but infinite scrolling may feel smoother for browsing. Cursor pagination or a virtualized list would be worth considering with larger datasets.
+2. **Using numbered pagination.** It keeps pages fast and shareable, but infinite scrolling may feel smoother for browsing. Cursor pagination or a virtualized list would be worth considering with larger datasets.
 
